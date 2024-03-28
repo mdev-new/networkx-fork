@@ -74,8 +74,8 @@ def _weight_function(G, weight):
     # string representing the edge attribute containing the weight of
     # the edge.
     if G.is_multigraph():
-        return lambda u, v, d: min(attr.get(weight, 1) for attr in d.values())
-    return lambda u, v, data: data.get(weight, 1)
+        return lambda u, v, d, *args: min(attr.get(weight, 1) for attr in d.values())
+    return lambda u, v, data, *args: data.get(weight, 1)
 
 
 @nx._dispatchable(edge_attrs="weight")
@@ -855,7 +855,7 @@ def _dijkstra_multisource(
         if v == target:
             break
         for u, e in G_succ[v].items():
-            cost = weight(v, u, e)
+            cost = weight(v, u, e, dist[v])
             if cost is None:
                 continue
             vu_dist = dist[v] + cost
@@ -2059,7 +2059,7 @@ def goldberg_radzik(G, source, weight="weight"):
                 continue
             d_u = d[u]
             # Skip nodes without out-edges of negative reduced costs.
-            if all(d_u + weight(u, v, e) >= d[v] for v, e in G_succ[u].items()):
+            if all(d_u + weight(u, v, e, d_u) >= d[v] for v, e in G_succ[u].items()):
                 continue
             # Nonrecursive DFS that inserts nodes reachable from u via edges of
             # nonpositive reduced costs into to_scan in (reverse) topological
@@ -2076,7 +2076,7 @@ def goldberg_radzik(G, source, weight="weight"):
                     stack.pop()
                     in_stack.remove(u)
                     continue
-                t = d[u] + weight(u, v, e)
+                t = d[u] + weight(u, v, e, d[u])
                 d_v = d[v]
                 if t < d_v:
                     is_neg = t < d_v
@@ -2103,7 +2103,7 @@ def goldberg_radzik(G, source, weight="weight"):
         for u in to_scan:
             d_u = d[u]
             for v, e in G_succ[u].items():
-                w_e = weight(u, v, e)
+                w_e = weight(u, v, e, d_u)
                 if d_u + w_e < d[v]:
                     d[v] = d_u + w_e
                     pred[v] = u
@@ -2410,7 +2410,7 @@ def bidirectional_dijkstra(G, source, target, weight="weight"):
 
         for w, d in neighs[dir][v].items():
             # weight(v, w, d) for forward and weight(w, v, d) for back direction
-            cost = weight(v, w, d) if dir == 0 else weight(w, v, d)
+            cost = weight(v, w, d, dists[dir][v]) if dir == 0 else weight(w, v, d, dists[dir][v])
             if cost is None:
                 continue
             vwLength = dists[dir][v] + cost
